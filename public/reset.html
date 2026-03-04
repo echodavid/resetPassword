@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reset Password</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f4f4; }
+    .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #333; }
+    form { display: flex; flex-direction: column; }
+    input { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .password-container { position: relative; }
+    .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; }
+    .toggle-password:hover { opacity: 0.7; }
+    button { padding: 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #c82333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Enter New Password</h1>
+    <form id="resetForm">
+      <div class="password-container">
+        <input type="password" name="newPassword" placeholder="New Password" required>
+        <button type="button" class="toggle-password">Show</button>
+      </div>
+      <div class="password-container">
+        <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+        <button type="button" class="toggle-password">Show</button>
+      </div>
+      <button type="submit">Reset Password</button>
+    </form>
+  </div>
+  <script>
+    const openEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5zM8 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
+    const closedEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5z"/><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    document.querySelectorAll('.toggle-password').forEach(button => {
+      const input = button.previousElementSibling;
+      button.innerHTML = input.type === 'password' ? openEye : closedEye;
+      button.addEventListener('click', function() {
+        if (input.type === 'password') {
+          input.type = 'text';
+          this.innerHTML = closedEye;
+        } else {
+          input.type = 'password';
+          this.innerHTML = openEye;
+        }
+      });
+    });
+    document.getElementById('resetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = new URLSearchParams();
+      data.append('token', new URLSearchParams(window.location.search).get('token'));
+      data.append('newPassword', e.target.newPassword.value);
+      data.append('confirmPassword', e.target.confirmPassword.value);
+      const res = await fetch('/reset-password', {
+        method: 'POST',
+        body: data,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const result = await res.json();
+      alert(result.message || result.error);
+      if (result.message) {
+        window.location.href = '/login';
+      }
+    });
+  </script>
+</body>
+</html>
