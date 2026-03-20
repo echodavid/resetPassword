@@ -53,6 +53,15 @@ app.get('/', (req, res) => res.redirect('/login'));
 
 app.get('/forgot', (req, res) => res.sendFile(__dirname + '/public/forgot.html'));
 
+app.post('/validate-token', (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+  const tokenRow = getToken.get(token, Date.now());
+  if (!tokenRow) return res.status(400).json({ error: 'Invalid or expired token.' });
+  return res.json({ valid: true });
+
+});
+
 app.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
