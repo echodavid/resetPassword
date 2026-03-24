@@ -33,19 +33,18 @@ export function Unlock() {
   const stepSend = container.querySelector('#step-send');
   const stepVerify = container.querySelector('#step-verify');
 
-  const setMessage = (text, color = 'black') => {
+  const setMessage = (text) => {
     messageEl.innerText = text;
-    messageEl.style.color = color;
+    messageEl.style.fontWeight = 'bold';
   };
 
   let email = '';
-  let actionToken = null;
 
   sendForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     email = e.target.email.value.trim();
     if (!email) {
-      setMessage('Email is required.', 'red');
+      setMessage('Email is required.');
       return;
     }
 
@@ -56,13 +55,13 @@ export function Unlock() {
         body: new URLSearchParams({ email, purpose: 'unlock-account' })
       });
       const result = await res.json();
-      setMessage(result.message || result.error || 'If the account exists, a code was sent.', res.ok ? 'black' : 'red');
+      setMessage(result.message || result.error || 'A code was sent.');
       if (res.ok) {
         stepSend.style.display = 'none';
         stepVerify.style.display = '';
       }
     } catch (err) {
-      setMessage('Failed to send verification code.', 'red');
+      setMessage('Network error.');
     }
   });
 
@@ -70,7 +69,7 @@ export function Unlock() {
     e.preventDefault();
     const code = e.target.code.value.trim();
     if (!code) {
-      setMessage('Enter the verification code.', 'red');
+      setMessage('Enter the verification code.');
       return;
     }
 
@@ -82,8 +81,8 @@ export function Unlock() {
       });
       const result = await res.json();
       if (res.ok && result.verified) {
-        actionToken = result.actionToken;
-        setMessage('Code verified! Unlocking your account...', 'black');
+        const actionToken = result.actionToken;
+        setMessage('Code verified! Unlocking...');
         const unlockRes = await fetch(import.meta.env.VITE_API_URL + '/action/unlock-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -91,18 +90,16 @@ export function Unlock() {
         });
         const unlockResult = await unlockRes.json();
         if (unlockRes.ok) {
-          setMessage(unlockResult.message || 'Account unlocked. You can now login.', 'green');
-          setTimeout(() => {
-            window.location.hash = '#login';
-          }, 1500);
+          setMessage(unlockResult.message || 'Account unlocked.');
+          setTimeout(() => { window.location.hash = '#login'; }, 1500);
         } else {
-          setMessage(unlockResult.error || 'Failed to unlock account.', 'red');
+          setMessage(unlockResult.error || 'Failed to unlock.');
         }
       } else {
-        setMessage(result.error || 'Invalid code.', 'red');
+        setMessage(result.error || 'Invalid code.');
       }
     } catch (err) {
-      setMessage('Failed to unlock account.', 'red');
+      setMessage('Network error.');
     }
   });
 

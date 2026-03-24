@@ -24,6 +24,11 @@ class RateLimiter {
     data.count++;
     return false;
   }
+
+  resetLimit(ip, action) {
+    const key = `${ip}:${action}`;
+    this.rateLimit.delete(key);
+  }
 }
 
 module.exports = RateLimiter;

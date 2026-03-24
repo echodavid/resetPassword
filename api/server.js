@@ -169,26 +169,31 @@ app.post('/forgot', async (req, res) => {
 	if (rateLimiter.checkRateLimit(getIP(req), 'forgot')) return res.status(429).json({ error: 'Too many requests.' });
 	try {
 		// Always respond generic
-		let token;
 		if (passwordService.userExists(email)) {
-			token = tokenService.generateToken();
-			const tokenHash = tokenService.hashToken(token);
-			tokenService.storeToken(tokenHash, email);
-			// Send email
-			const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
-			const resetUrl = `${frontendUrl}/#reset?token=${token}`;
+			const code = verificationService.generateCode();
+			const codeHash = verificationService.hashCode(code);
+			verificationService.storeCode(codeHash, email, 'recovery');
+			
+			const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+			const recoveryLink = `${frontendUrl}/#reset?email=${encodeURIComponent(email)}&code=${code}`;
+			console.log(`[RECOVERY LINK SENT to ${email}]: ${recoveryLink}`);
+			
 			await transporter.sendMail({
 				to: email,
-				subject: 'Password Reset',
-				html: `Click <a href="${resetUrl}">here</a> to reset your password.`
+				subject: 'Password Recovery Link',
+				html: `
+					<p>You requested a password recovery.</p>
+					<p>Click the link below to reset your password:</p>
+					<p><a href="${recoveryLink}">${recoveryLink}</a></p>
+					<p>Or use this 6-digit code: <b>${code}</b></p>
+					<p>This code expires in 5 minutes.</p>
+				`
 			});
-			// Log email sending
-			console.log(`[EMAIL] Sent password reset to: ${email} | URL: ${resetUrl}`);
-			auditService.log('forgot', email, getIP(req), 'token sent');
+			auditService.log('forgot', email, getIP(req), 'link sent');
 		} else {
 			auditService.log('forgot', email, getIP(req), 'no account');
 		}
-		return res.json({ message: 'If the account exists, a reset link was sent.' });
+		return res.json({ message: 'If the account exists, a verification code was sent.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
 	}
@@ -197,7 +202,7 @@ app.post('/forgot', async (req, res) => {
 // Endpoint: Verify identity (send code)
 app.post('/verify/send', async (req, res) => {
 	const { email, purpose } = req.body;
-	const allowed = new Set(['change-password', 'update-email', 'logout-all', 'unlock-account']);
+	const allowed = new Set(['change-password', 'update-email', 'logout-all', 'unlock-account', 'recovery']);
 	if (!email || !purpose) return res.status(400).json({ error: 'Email and purpose required.' });
 	if (!allowed.has(purpose)) return res.status(400).json({ error: 'Invalid purpose.' });
 	if (rateLimiter.checkRateLimit(getIP(req), 'verify-send')) return res.status(429).json({ error: 'Too many requests.' });
@@ -206,8 +211,7 @@ app.post('/verify/send', async (req, res) => {
 			const code = verificationService.generateCode();
 			const codeHash = verificationService.hashCode(code);
 			verificationService.storeCode(codeHash, email, purpose);
-			// Console log for dev: make code visible in backend output
-			console.log(`[VERIFY] code=${code} email=${email} purpose=${purpose}`);
+			console.log(`[VERIFICATION CODE SENT to ${email} (purpose: ${purpose})]: ${code}`);
 			const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
 			await transporter.sendMail({
 				to: email,
@@ -250,18 +254,22 @@ app.post('/reset', async (req, res) => {
 	const { token, password } = req.body;
 	if (!token || !password) return res.status(400).json({ error: 'Token and password required.' });
 	if (!passwordRegex.test(password)) return res.status(400).json({ error: 'Password does not meet policy.' });
-	if (rateLimiter.checkRateLimit(getIP(req), 'reset')) return res.status(429).json({ error: 'Too many requests.' });
 	try {
-		const tokenHash = tokenService.hashToken(token);
-		const tokenRow = tokenService.validateToken(tokenHash);
-		if (!tokenRow) {
+		const hash = actionTokenService.hashToken(token);
+		const tokenRow = actionTokenService.validateToken(hash);
+		if (!tokenRow || tokenRow.purpose !== 'recovery') {
 			auditService.log('reset', 'unknown', getIP(req), 'invalid token');
-			return res.status(400).json({ error: 'Invalid or expired token.' });
+			return res.status(400).json({ error: 'Invalid or expired action token.' });
 		}
-		await passwordService.resetPassword(tokenRow.email, password);
-		tokenService.removeToken(tokenHash);
-		auditService.log('reset', tokenRow.email, getIP(req), 'success');
-		// Aquí se invalidarían sesiones activas (no implementado)
+		
+		db.transaction(() => {
+			actionTokenService.consumeToken(hash);
+			passwordService.resetPassword(tokenRow.email, password);
+			// Invalidate all sessions after password reset (Reliability/Security)
+			passwordService.invalidateSessions(tokenRow.email);
+			auditService.log('reset', tokenRow.email, getIP(req), 'success');
+		})();
+		
 		return res.json({ message: 'Password reset successful.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
@@ -278,6 +286,12 @@ app.post('/validate-token', (req, res) => {
 	return res.json({ valid: true });
 });
 
+app.get('/validate-session', (req, res) => {
+	const session = requireSession(req, res);
+	if (!session) return;
+	res.json({ valid: true, email: session.email });
+});
+
 // Endpoint: Sensitive actions protected by verification
 app.post('/action/change-password', async (req, res) => {
 	const { actionToken, newPassword } = req.body;
@@ -287,10 +301,15 @@ app.post('/action/change-password', async (req, res) => {
 		const hash = actionTokenService.hashToken(actionToken);
 		const tokenRow = actionTokenService.validateToken(hash);
 		if (!tokenRow || tokenRow.purpose !== 'change-password') return res.status(400).json({ error: 'Invalid or expired action token.' });
-		// Consume token so it cannot be reused
-		actionTokenService.consumeToken(hash);
-		await passwordService.resetPassword(tokenRow.email, newPassword);
-		auditService.log('change-password', tokenRow.email, getIP(req), 'success');
+		
+		db.transaction(() => {
+			// Consume token so it cannot be reused
+			actionTokenService.consumeToken(hash);
+			passwordService.resetPassword(tokenRow.email, newPassword);
+			passwordService.invalidateSessions(tokenRow.email);
+			auditService.log('change-password', tokenRow.email, getIP(req), 'success');
+		})();
+		
 		return res.json({ message: 'Password changed successfully.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
@@ -306,17 +325,63 @@ app.post('/action/change-email', async (req, res) => {
 		const tokenRow = actionTokenService.validateToken(hash);
 		if (!tokenRow || tokenRow.purpose !== 'update-email') return res.status(400).json({ error: 'Invalid or expired action token.' });
 		if (passwordService.userExists(newEmail)) return res.status(409).json({ error: 'Email already in use.' });
-		// Consume token so it cannot be reused
-		actionTokenService.consumeToken(hash);
-		// Update email and clean up any tokens tied to the old email
-		const oldEmail = tokenRow.email;
-		const updateEmail = db.prepare('UPDATE users SET email = ? WHERE email = ?');
-		updateEmail.run(newEmail, oldEmail);
-		db.prepare('DELETE FROM reset_tokens WHERE email = ?').run(oldEmail);
-		db.prepare('DELETE FROM verification_codes WHERE email = ?').run(oldEmail);
-		db.prepare('DELETE FROM action_tokens WHERE email = ?').run(oldEmail);
-		auditService.log('change-email', oldEmail, getIP(req), `to=${newEmail}`);
+		
+		db.transaction(() => {
+			// Consume token so it cannot be reused
+			actionTokenService.consumeToken(hash);
+			// Update email and clean up any tokens tied to the old email
+			const oldEmail = tokenRow.email;
+			const updateEmail = db.prepare('UPDATE users SET email = ? WHERE email = ?');
+			updateEmail.run(newEmail, oldEmail);
+			db.prepare('DELETE FROM reset_tokens WHERE email = ?').run(oldEmail);
+			db.prepare('DELETE FROM verification_codes WHERE email = ?').run(oldEmail);
+			db.prepare('DELETE FROM action_tokens WHERE email = ?').run(oldEmail);
+			passwordService.invalidateSessions(newEmail);
+			auditService.log('change-email', oldEmail, getIP(req), `to=${newEmail}`);
+		})();
+		
 		return res.json({ message: 'Email updated successfully.' });
+	} catch (e) {
+		return res.status(500).json({ error: 'Internal error.' });
+	}
+});
+
+app.post('/action/unlock-account', async (req, res) => {
+	const { actionToken } = req.body;
+	if (!actionToken) return res.status(400).json({ error: 'actionToken required.' });
+	try {
+		const hash = actionTokenService.hashToken(actionToken);
+		const tokenRow = actionTokenService.validateToken(hash);
+		if (!tokenRow || tokenRow.purpose !== 'unlock-account') return res.status(400).json({ error: 'Invalid or expired action token.' });
+		
+		db.transaction(() => {
+			actionTokenService.consumeToken(hash);
+			passwordService.unlockUser(tokenRow.email);
+			rateLimiter.resetLimit(getIP(req), 'login'); // <--- CLEAR RATE LIMIT
+			auditService.log('unlock-account', tokenRow.email, getIP(req), 'success');
+		})();
+		
+		return res.json({ message: 'Account unlocked successfully.' });
+	} catch (e) {
+		return res.status(500).json({ error: 'Internal error.' });
+	}
+});
+
+app.post('/action/logout-all', async (req, res) => {
+	const { actionToken } = req.body;
+	if (!actionToken) return res.status(400).json({ error: 'actionToken required.' });
+	try {
+		const hash = actionTokenService.hashToken(actionToken);
+		const tokenRow = actionTokenService.validateToken(hash);
+		if (!tokenRow || tokenRow.purpose !== 'logout-all') return res.status(400).json({ error: 'Invalid or expired action token.' });
+		
+		db.transaction(() => {
+			actionTokenService.consumeToken(hash);
+			passwordService.invalidateSessions(tokenRow.email);
+			auditService.log('logout-all', tokenRow.email, getIP(req), 'success');
+		})();
+		
+		return res.json({ message: 'All sessions closed successfully.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
 	}

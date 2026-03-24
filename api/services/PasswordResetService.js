@@ -7,6 +7,8 @@ class PasswordResetService {
     this.getUser = this.db.prepare('SELECT * FROM users WHERE email = ?');
     this.insertUser = this.db.prepare('INSERT OR IGNORE INTO users (email, password) VALUES (?, ?)');
     this.updatePassword = this.db.prepare('UPDATE users SET password = ? WHERE email = ?');
+    this.unlockAccount = this.db.prepare('UPDATE users SET locked = 0 WHERE email = ?');
+    this.updateSessionVersion = this.db.prepare('UPDATE users SET session_version = session_version + 1 WHERE email = ?');
   }
 
   async hashPassword(password) {
@@ -37,6 +39,14 @@ class PasswordResetService {
   async resetPassword(email, newPassword) {
     const hashed = await this.hashPassword(newPassword);
     this.updatePassword.run(hashed, email);
+  }
+
+  async unlockUser(email) {
+    this.unlockAccount.run(email);
+  }
+
+  async invalidateSessions(email) {
+    this.updateSessionVersion.run(email);
   }
 
   userExists(email) {

@@ -4,7 +4,8 @@ export function Register() {
   container.className = 'container';
   container.innerHTML = `
     <h1>Register</h1>
-    <div id="policy" class="message" style="margin-bottom: 16px;"></div>
+    <div id="message" class="message" style="margin-bottom: 16px;"></div>
+    <div id="policy" class="message" style="margin-bottom: 16px; font-size: 0.85em;"></div>
     <form id="registerForm">
       <input type="text" name="email" placeholder="Email" required>
       <div class="password-container">
@@ -19,6 +20,12 @@ export function Register() {
     </form>
     <p><a href="#login">Already have an account? Login</a></p>
   `;
+
+  const messageEl = container.querySelector('#message');
+  const setMessage = (text) => {
+    messageEl.innerText = text;
+    messageEl.style.fontWeight = 'bold';
+  };
 
   // Fetch password policy from backend
   fetch(import.meta.env.VITE_API_URL + '/policy')
@@ -52,18 +59,22 @@ export function Register() {
     data.append('email', e.target.email.value);
     data.append('password', e.target.password.value);
     if (e.target.password.value !== e.target.confirmPassword.value) {
-      alert('Passwords do not match');
+      setMessage('Passwords do not match');
       return;
     }
-    const res = await fetch(import.meta.env.VITE_API_URL + '/register', {
-      method: 'POST',
-      body: data,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-    const result = await res.json();
-    alert(result.message || result.error);
-    if (result.message) {
-      window.location.hash = '#login';
+    try {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/register', {
+        method: 'POST',
+        body: data,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const result = await res.json();
+      setMessage(result.message || result.error);
+      if (res.ok && result.message) {
+        setTimeout(() => { window.location.hash = '#login'; }, 1500);
+      }
+    } catch (err) {
+      setMessage('Network error.');
     }
   });
 

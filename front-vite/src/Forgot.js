@@ -6,29 +6,32 @@ export function Forgot() {
   container.className = 'container';
   container.innerHTML = `
     <h1>Reset Password</h1>
+    <div id="message" class="message" style="margin-bottom: 16px;"></div>
     <form id="forgotForm">
       <input type="text" name="email" placeholder="Enter your email" required>
-      <button type="submit" id="submitBtn">Send Reset Link</button>
+      <button type="submit" id="submitBtn">Send Recovery Code</button>
     </form>
-    <div id="message" class="message"></div>
-    <div id="loading" class="loading" style="display: none;">Sending email...</div>
+    <p><a href="#login">Back to Login</a></p>
   `;
+
+  const messageEl = container.querySelector('#message');
+  const setMessage = (text) => {
+    messageEl.innerText = text;
+    messageEl.style.fontWeight = 'bold';
+  };
 
   container.querySelector('#forgotForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = container.querySelector('#submitBtn');
-    const messageDiv = container.querySelector('#message');
-    const loadingDiv = container.querySelector('#loading');
-    const form = container.querySelector('#forgotForm');
+    const form = e.target;
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
-    loadingDiv.style.display = 'block';
-    messageDiv.innerText = '';
+    setMessage('');
 
     try {
       const data = new URLSearchParams();
-      data.append('email', e.target.email.value);
+      data.append('email', form.email.value);
       const res = await fetch(import.meta.env.VITE_API_URL + '/forgot', {
         method: 'POST',
         body: data,
@@ -36,26 +39,19 @@ export function Forgot() {
       });
       const result = await res.json();
 
-      loadingDiv.style.display = 'none';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Reset Link';
+      submitBtn.textContent = 'Send Recovery Code';
 
-      if (result.error) {
-        messageDiv.innerText = `Error: ${result.error}`;
-        messageDiv.style.color = 'red';
+      if (res.ok) {
+        setMessage(result.message);
+        setTimeout(() => { window.location.hash = '#reset'; }, 1500);
       } else {
-        messageDiv.innerText = result.message;
-        messageDiv.style.color = 'green';
-        form.style.display = 'none';
+        setMessage(result.error || 'Error sending code.');
       }
     } catch (error) {
-      loadingDiv.style.display = 'none';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Reset Link';
-
-      messageDiv.innerText = 'Network error. Please try again.';
-      messageDiv.style.color = 'red';
-      console.error('Fetch error:', error);
+      submitBtn.textContent = 'Send Recovery Code';
+      setMessage('Network error.');
     }
   });
 

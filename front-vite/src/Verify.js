@@ -12,8 +12,10 @@ export function Verify() {
         <label>
           Action:
           <select name="purpose">
-            <option value="change-password">Change password</option>
-            <option value="update-email">Change email</option>
+            <option value="change-password">Reset Password</option>
+            <option value="update-email">Update Email Address</option>
+            <option value="logout-all">Sign Out Everywhere</option>
+            <option value="unlock-account">Unlock Account</option>
           </select>
         </label>
         <input type="text" name="email" placeholder="Email" required>
@@ -61,9 +63,10 @@ export function Verify() {
   const openEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5zM8 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
   const closedEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5z"/><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 
-  const setMessage = (text, color = 'black') => {
+  const setMessage = (text) => {
     messageEl.innerText = text;
-    messageEl.style.color = color;
+    messageEl.style.fontWeight = 'bold';
+    messageEl.style.color = 'black';
   };
 
   const togglePasswordButtons = (containerEl) => {
@@ -86,12 +89,29 @@ export function Verify() {
 
   let savedEmail = '';
   let actionToken = null;
-  let purpose = 'change-password';
+  
+  const hash = window.location.hash || '';
+  const searchParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+  let purpose = searchParams.get('purpose') || 'change-password';
+  let urlEmail = searchParams.get('email') || localStorage.getItem('userEmail') || '';
+
+  if (searchParams.has('purpose')) {
+    const selector = container.querySelector('select[name="purpose"]');
+    if (selector) selector.value = purpose;
+    const label = container.querySelector('label');
+    if (label) label.style.display = 'none'; // Hide choice if already in URL
+  }
+  if (urlEmail) {
+    const emailInput = container.querySelector('input[name="email"]');
+    if (emailInput) emailInput.value = urlEmail;
+  }
 
   const showActionFields = () => {
     const passwordBlock = container.querySelector('#action-password');
     const emailBlock = container.querySelector('#action-email');
     const prompt = container.querySelector('#actionPrompt');
+    const submitBtn = container.querySelector('#actionForm button[type="submit"]');
+
     const newPasswordInput = container.querySelector('input[name="newPassword"]');
     const confirmPasswordInput = container.querySelector('input[name="confirmPassword"]');
     const newEmailInput = container.querySelector('input[name="newEmail"]');
@@ -99,14 +119,32 @@ export function Verify() {
     if (purpose === 'update-email') {
       passwordBlock.style.display = 'none';
       emailBlock.style.display = '';
-      prompt.innerText = 'Enter the new email address for your account:';
+      prompt.innerText = 'Confirm the new email address:';
+      submitBtn.innerText = 'Update Email';
       newPasswordInput.disabled = true;
       confirmPasswordInput.disabled = true;
       newEmailInput.disabled = false;
+    } else if (purpose === 'logout-all') {
+      passwordBlock.style.display = 'none';
+      emailBlock.style.display = 'none';
+      prompt.innerText = 'Press below to sign out from all active sessions.';
+      submitBtn.innerText = 'Sign Out Everywhere';
+      newPasswordInput.disabled = true;
+      confirmPasswordInput.disabled = true;
+      newEmailInput.disabled = true;
+    } else if (purpose === 'unlock-account') {
+      passwordBlock.style.display = 'none';
+      emailBlock.style.display = 'none';
+      prompt.innerText = 'Press below to unlock this account.';
+      submitBtn.innerText = 'Unlock Account';
+      newPasswordInput.disabled = true;
+      confirmPasswordInput.disabled = true;
+      newEmailInput.disabled = true;
     } else {
       passwordBlock.style.display = '';
       emailBlock.style.display = 'none';
       prompt.innerText = 'Set a new password for your account:';
+      submitBtn.innerText = 'Reset Password';
       newPasswordInput.disabled = false;
       confirmPasswordInput.disabled = false;
       newEmailInput.disabled = true;
@@ -118,7 +156,7 @@ export function Verify() {
     purpose = e.target.purpose.value;
     savedEmail = e.target.email.value.trim();
     if (!savedEmail) {
-      setMessage('Email is required.', 'red');
+      setMessage('Email is required.');
       return;
     }
     try {
@@ -128,11 +166,11 @@ export function Verify() {
         body: new URLSearchParams({ email: savedEmail, purpose })
       });
       const result = await res.json();
-      setMessage(result.message || result.error || 'A code was sent if the account exists.', 'black');
+      setMessage(result.message || result.error || 'A code was sent if the account exists.');
       stepSend.style.display = 'none';
       stepVerify.style.display = '';
     } catch (err) {
-      setMessage('Failed to send verification code.', 'red');
+      setMessage('Failed to send verification code.');
     }
   });
 
@@ -140,7 +178,7 @@ export function Verify() {
     e.preventDefault();
     const code = e.target.code.value.trim();
     if (!code) {
-      setMessage('Enter the verification code.', 'red');
+      setMessage('Enter the verification code.');
       return;
     }
     try {
@@ -152,15 +190,15 @@ export function Verify() {
       const result = await res.json();
       if (result.verified) {
         actionToken = result.actionToken;
-        setMessage('Verified! You can now proceed.', 'green');
+        setMessage('Verified! You can now proceed.');
         stepVerify.style.display = 'none';
         showActionFields();
         stepAction.style.display = '';
       } else {
-        setMessage(result.error || 'Invalid code.', 'red');
+        setMessage(result.error || 'Invalid code.');
       }
     } catch (err) {
-      setMessage('Failed to verify code.', 'red');
+      setMessage('Failed to verify code.');
     }
   });
 
@@ -170,7 +208,7 @@ export function Verify() {
     submitButton.disabled = true;
 
     if (!actionToken) {
-      setMessage('Missing action token. Please verify code again.', 'red');
+      setMessage('Missing action token. Please verify code again.');
       submitButton.disabled = false;
       return;
     }
@@ -181,7 +219,7 @@ export function Verify() {
     if (purpose === 'update-email') {
       const newEmail = e.target.newEmail.value.trim();
       if (!newEmail) {
-        setMessage('New email is required.', 'red');
+        setMessage('New email is required.');
         submitButton.disabled = false;
         return;
       }
@@ -197,7 +235,7 @@ export function Verify() {
       const newPassword = e.target.newPassword.value;
       const confirmPassword = e.target.confirmPassword.value;
       if (newPassword !== confirmPassword) {
-        setMessage('Passwords do not match.', 'red');
+        setMessage('Passwords do not match.');
         submitButton.disabled = false;
         return;
       }
@@ -213,16 +251,15 @@ export function Verify() {
       });
       const result = await res.json();
       if (res.ok && result.message) {
-        setMessage(result.message, 'green');
+        setMessage(result.message);
         // Hide the form to show final state clearly
         stepAction.style.display = 'none';
       } else {
-        setMessage(result.error || `Could not complete action (status ${res.status}).`, 'red');
+        setMessage(result.error || `Could not complete action (status ${res.status}).`);
       }
     } catch (err) {
-      setMessage('Failed to complete action.', 'red');
+      setMessage('Failed to complete action.');
     }
-
     submitButton.disabled = false;
   });
 

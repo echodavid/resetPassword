@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'config.dart';
@@ -9,38 +10,60 @@ class ResetScreen extends StatefulWidget {
 }
 
 class _ResetScreenState extends State<ResetScreen> {
-  final tokenController = TextEditingController();
+  final emailController = TextEditingController();
+  final codeController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
   String message = '';
+  bool isVerified = false;
+  String? actionToken;
+
+  Future<void> verifyCode() async {
+    final res = await http.post(
+      Uri.parse('${Config.apiUrl}/verify/check'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'email': emailController.text,
+        'purpose': 'recovery',
+        'code': codeController.text,
+      },
+    );
+    final data = json.decode(res.body);
+    if (data['verified'] == true) {
+      setState(() {
+        isVerified = true;
+        actionToken = data['actionToken'];
+        message = 'Code verified! Set your new password.';
+      });
+    } else {
+      setState(() {
+        message = data['error'] ?? 'Verification failed';
+      });
+    }
+  }
 
   Future<void> reset() async {
     if (passwordController.text != confirmController.text) {
       setState(() { message = 'Passwords do not match'; });
       return;
     }
-    final validateRes = await http.post(
-      Uri.parse('${Config.apiUrl}/validate-token'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'token': tokenController.text},
-    );
-    if (validateRes.statusCode != 200) {
-      try {
-        final error = validateRes.body.contains('error') ? validateRes.body : 'Invalid or expired token';
-        setState(() { message = error; });
-      } catch (_) {
-        setState(() { message = 'Invalid or expired token'; });
-      }
-      return;
-    }
     final res = await http.post(
       Uri.parse('${Config.apiUrl}/reset'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'token': tokenController.text, 'password': passwordController.text},
+      body: {
+        'token': actionToken ?? '',
+        'password': passwordController.text,
+      },
     );
+    final data = json.decode(res.body);
     setState(() {
-      message = res.body;
+      message = data['message'] ?? data['error'] ?? 'Error updating password';
     });
+    if (res.statusCode == 200) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) Navigator.pop(context);
+      });
+    }
   }
 
   @override
@@ -49,15 +72,24 @@ class _ResetScreenState extends State<ResetScreen> {
       appBar: AppBar(title: const Text('Reset Password')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(controller: tokenController, decoration: const InputDecoration(labelText: 'Reset Token')),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'New Password'), obscureText: true),
-            TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
-            ElevatedButton(child: const Text('Reset Password'), onPressed: reset),
-            Text('Copia y pega el token recibido por correo.'),
-            Text(message),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              if (!isVerified) ...[
+                TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
+                TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Recovery Code')),
+                const SizedBox(height: 16),
+                ElevatedButton(onPressed: verifyCode, child: const Text('Verify Code')),
+              ] else ...[
+                TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'New Password'), obscureText: true),
+                TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
+                const SizedBox(height: 16),
+                ElevatedButton(onPressed: reset, child: const Text('Update Password')),
+              ],
+              const SizedBox(height: 16),
+              Text(message, style: TextStyle(color: message.contains('Error') || message.contains('failed') ? Colors.red : Colors.green)),
+            ],
+          ),
         ),
       ),
     );

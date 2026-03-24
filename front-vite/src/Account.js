@@ -10,6 +10,13 @@ export function Account() {
     return container;
   }
 
+  // Verify session validity with server
+  fetch(import.meta.env.VITE_API_URL + '/validate-session', {
+    headers: { Authorization: `Bearer ${sessionToken}` }
+  }).then(res => {
+    if (res.status === 401) logout();
+  });
+
   container.innerHTML = `
     <h1>My Account</h1>
     <p>Logged in as <strong>${userEmail}</strong></p>
@@ -38,16 +45,16 @@ export function Account() {
   };
 
   container.querySelector('#changePasswordBtn').addEventListener('click', () => {
-    window.location.hash = '#verify?purpose=change-password';
+    window.location.hash = `#verify?purpose=change-password&email=${userEmail}`;
   });
   container.querySelector('#changeEmailBtn').addEventListener('click', () => {
-    window.location.hash = '#verify?purpose=update-email';
+    window.location.hash = `#verify?purpose=update-email&email=${userEmail}`;
   });
   container.querySelector('#logoutAllBtn').addEventListener('click', () => {
-    window.location.hash = '#verify?purpose=logout-all';
+    window.location.hash = `#verify?purpose=logout-all&email=${userEmail}`;
   });
   container.querySelector('#unlockAccountBtn').addEventListener('click', () => {
-    window.location.hash = '#verify?purpose=unlock-account';
+    window.location.hash = `#verify?purpose=unlock-account&email=${userEmail}`;
   });
   container.querySelector('#logoutBtn').addEventListener('click', logout);
 

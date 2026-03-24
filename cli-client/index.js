@@ -12,81 +12,21 @@ function prompt(question) {
   return new Promise(resolve => rl.question(question, ans => { rl.close(); resolve(ans); }));
 }
 
+let currentToken = null;
+
 async function mainMenu() {
-  console.log('\nPassword Reset CLI');
-  console.log('1. Request password reset email');
-  console.log('2. Reset password with token');
-  console.log('3. Login');
-  console.log('4. Register');
-  console.log('5. Change password (verification code)');
-  console.log('6. Change email (verification code)');
-  console.log('7. Unlock account (verification code)');
-  console.log('0. Exit');
-  const choice = await prompt('Choose an option: ');
+  console.log('\n--- PASSWORD RESET CLI ---');
+  console.log('1. LOGIN');
+  console.log('2. REGISTER');
+  console.log('3. FORGOT PASSWORD (REQUEST CODE)');
+  console.log('4. UNLOCK ACCOUNT (VERIFICATION CODE)');
+  console.log('0. EXIT');
+  
+  const choice = await prompt('\nCHOOSE AN OPTION: ');
+  
   if (choice === '1') {
-    const email = await prompt('Enter your email: ');
-    try {
-      const res = await fetch(`${apiUrl}/forgot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email })
-      });
-      const result = await res.json();
-      console.log(result.message || result.error);
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-    await mainMenu();
-  } else if (choice === '2') {
-    const token = await prompt('Enter your reset token: ');
-    const password = await prompt('Enter new password: ');
-    const confirmPassword = await prompt('Confirm new password: ');
-    if (password !== confirmPassword) {
-      console.error('Passwords do not match');
-      await mainMenu();
-      return;
-    }
-    // Strip whitespace and validate token input
-    const cleanToken = token.trim();
-    if (!cleanToken) {
-      console.error('Token cannot be empty');
-      await mainMenu();
-      return;
-    }
-    // Validate token before reset
-    try {
-      const validateRes = await fetch(`${apiUrl}/validate-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ token: cleanToken })
-      });
-      const validateResult = await validateRes.json();
-      if (!validateResult.valid) {
-        console.error(validateResult.error || 'Invalid or expired token');
-        await mainMenu();
-        return;
-      }
-    } catch (err) {
-      console.error('Error validating token:', err.message);
-      await mainMenu();
-      return;
-    }
-    // Proceed with reset
-    try {
-      const res = await fetch(`${apiUrl}/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ token: cleanToken, password })
-      });
-      const result = await res.json();
-      console.log(result.message || result.error);
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-    await mainMenu();
-  } else if (choice === '3') {
-    const email = await prompt('Enter your email: ');
-    const password = await prompt('Enter your password: ');
+    const email = await prompt('EMAIL: ');
+    const password = await prompt('PASSWORD: ');
     try {
       const res = await fetch(`${apiUrl}/login`, {
         method: 'POST',
@@ -94,17 +34,24 @@ async function mainMenu() {
         body: new URLSearchParams({ email, password })
       });
       const result = await res.json();
-      console.log(result.message || result.error);
+      if (res.ok && result.sessionToken) {
+        console.log('\nLOGIN SUCCESSFUL.');
+        currentToken = result.sessionToken;
+        await accountMenu(email, result.sessionToken);
+      } else {
+        console.log(`\nERROR: ${result.error || 'Login failed.'}`);
+        await mainMenu();
+      }
     } catch (err) {
-      console.error('Error:', err.message);
+      console.error('\nNETWORK ERROR:', err.message);
+      await mainMenu();
     }
-    await mainMenu();
-  } else if (choice === '4') {
-    const email = await prompt('Enter your email: ');
-    const password = await prompt('Enter your password: ');
-    const confirmPassword = await prompt('Confirm your password: ');
-    if (password !== confirmPassword) {
-      console.error('Passwords do not match');
+  } else if (choice === '2') {
+    const email = await prompt('EMAIL: ');
+    const password = await prompt('PASSWORD: ');
+    const confirm = await prompt('CONFIRM PASSWORD: ');
+    if (password !== confirm) {
+      console.log('\nERROR: PASSWORDS DO NOT MATCH.');
       await mainMenu();
       return;
     }
@@ -115,182 +62,170 @@ async function mainMenu() {
         body: new URLSearchParams({ email, password })
       });
       const result = await res.json();
-      console.log(result.message || result.error);
+      console.log(`\n${result.message || result.error}`);
     } catch (err) {
-      console.error('Error:', err.message);
+      console.error('\nERROR:', err.message);
     }
     await mainMenu();
-  } else if (choice === '5') {
-    const email = await prompt('Enter your email: ');
+  } else if (choice === '3') {
+    const email = await prompt('EMAIL: ');
     try {
-      const sendRes = await fetch(`${apiUrl}/verify/send`, {
+      const res = await fetch(`${apiUrl}/forgot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'change-password' })
-      });
-      const sendResult = await sendRes.json();
-      console.log(sendResult.message || sendResult.error || 'If the account exists, a code was sent.');
-    } catch (err) {
-      console.error('Error sending verification code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    const code = await prompt('Enter the verification code: ');
-    let actionToken;
-    try {
-      const checkRes = await fetch(`${apiUrl}/verify/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'change-password', code })
-      });
-      const checkResult = await checkRes.json();
-      if (!checkResult.verified) {
-        console.error(checkResult.error || 'Verification failed.');
-        await mainMenu();
-        return;
-      }
-      actionToken = checkResult.actionToken;
-    } catch (err) {
-      console.error('Error verifying code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    const newPassword = await prompt('Enter your new password: ');
-    const confirmPassword = await prompt('Confirm your new password: ');
-    if (newPassword !== confirmPassword) {
-      console.error('Passwords do not match');
-      await mainMenu();
-      return;
-    }
-
-    try {
-      const res = await fetch(`${apiUrl}/action/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ actionToken, newPassword })
+        body: new URLSearchParams({ email })
       });
       const result = await res.json();
-      console.log(result.message || result.error);
+      console.log(`\n${result.message || result.error}`);
+      if (res.ok) {
+        console.log('\nPROCEEDING TO RESET STEP...');
+        await resetPasswordFlow(email);
+      }
     } catch (err) {
-      console.error('Error:', err.message);
+      console.error('\nERROR:', err.message);
     }
-
     await mainMenu();
-  } else if (choice === '6') {
-    const email = await prompt('Enter your current email: ');
-    try {
-      const sendRes = await fetch(`${apiUrl}/verify/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'update-email' })
-      });
-      const sendResult = await sendRes.json();
-      console.log(sendResult.message || sendResult.error || 'If the account exists, a code was sent.');
-    } catch (err) {
-      console.error('Error sending verification code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    const code = await prompt('Enter the verification code: ');
-    let actionToken;
-    try {
-      const checkRes = await fetch(`${apiUrl}/verify/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'update-email', code })
-      });
-      const checkResult = await checkRes.json();
-      if (!checkResult.verified) {
-        console.error(checkResult.error || 'Verification failed.');
-        await mainMenu();
-        return;
-      }
-      actionToken = checkResult.actionToken;
-    } catch (err) {
-      console.error('Error verifying code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    const newEmail = await prompt('Enter your new email: ');
-    if (!newEmail) {
-      console.error('New email cannot be empty');
-      await mainMenu();
-      return;
-    }
-
-    try {
-      const res = await fetch(`${apiUrl}/action/change-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ actionToken, newEmail })
-      });
-      const result = await res.json();
-      console.log(result.message || result.error);
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-
-    await mainMenu();
-  } else if (choice === '7') {
-    const email = await prompt('Enter your email: ');
-    try {
-      const sendRes = await fetch(`${apiUrl}/verify/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'unlock-account' })
-      });
-      const sendResult = await sendRes.json();
-      console.log(sendResult.message || sendResult.error || 'If the account exists, a code was sent.');
-    } catch (err) {
-      console.error('Error sending verification code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    const code = await prompt('Enter the verification code: ');
-    let actionToken;
-    try {
-      const checkRes = await fetch(`${apiUrl}/verify/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, purpose: 'unlock-account', code })
-      });
-      const checkResult = await checkRes.json();
-      if (!checkResult.verified) {
-        console.error(checkResult.error || 'Verification failed.');
-        await mainMenu();
-        return;
-      }
-      actionToken = checkResult.actionToken;
-    } catch (err) {
-      console.error('Error verifying code:', err.message);
-      await mainMenu();
-      return;
-    }
-
-    try {
-      const res = await fetch(`${apiUrl}/action/unlock-account`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ actionToken })
-      });
-      const result = await res.json();
-      console.log(result.message || result.error);
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-
+  } else if (choice === '4') {
+    await verificationWorkflow('unlock-account');
     await mainMenu();
   } else if (choice === '0') {
-    console.log('Goodbye!');
+    console.log('\nGOODBYE.');
     process.exit(0);
   } else {
-    console.log('Invalid option.');
+    console.log('\nINVALID OPTION.');
     await mainMenu();
+  }
+}
+
+async function accountMenu(email, sessionToken) {
+  console.log(`\n--- LOGGED IN AS: ${email.toUpperCase()} ---`);
+  console.log('1. CHANGE PASSWORD');
+  console.log('2. CHANGE EMAIL');
+  console.log('3. SIGN OUT FROM EVERYWHERE');
+  console.log('4. LOGOUT (CURRENT SESSION)');
+  console.log('0. BACK');
+
+  const choice = await prompt('\nCHOOSE AN OPTION: ');
+
+  if (choice === '1') {
+    await verificationWorkflow('change-password', email);
+    await accountMenu(email, sessionToken);
+  } else if (choice === '2') {
+    await verificationWorkflow('update-email', email);
+    await accountMenu(email, sessionToken);
+  } else if (choice === '3') {
+    await verificationWorkflow('logout-all', email);
+    await mainMenu(); // Version bumped, token invalidated
+  } else if (choice === '4') {
+    console.log('\nLOGGING OUT...');
+    await mainMenu();
+  } else if (choice === '0') {
+    await mainMenu();
+  } else {
+    console.log('\nINVALID OPTION.');
+    await accountMenu(email, sessionToken);
+  }
+}
+
+async function resetPasswordFlow(email) {
+  const code = await prompt('ENTER THE RECOVERY CODE: ');
+  try {
+    const checkRes = await fetch(`${apiUrl}/verify/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email, purpose: 'recovery', code })
+    });
+    const checkResult = await checkRes.json();
+    if (!checkResult.verified) {
+      console.log(`\nERROR: ${checkResult.error || 'Verification failed.'}`);
+      return;
+    }
+    
+    const password = await prompt('ENTER NEW PASSWORD: ');
+    const confirm = await prompt('CONFIRM NEW PASSWORD: ');
+    if (password !== confirm) {
+      console.log('\nERROR: PASSWORDS DO NOT MATCH.');
+      return;
+    }
+
+    const res = await fetch(`${apiUrl}/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: checkResult.actionToken, password })
+    });
+    const result = await res.json();
+    console.log(`\n${result.message || result.error}`);
+  } catch (err) {
+    console.error('\nERROR:', err.message);
+  }
+}
+
+async function verificationWorkflow(purpose, prefilledEmail = null) {
+  const email = prefilledEmail || await prompt('ENTER EMAIL: ');
+  
+  try {
+    const sendRes = await fetch(`${apiUrl}/verify/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email, purpose })
+    });
+    const sendResult = await sendRes.json();
+    console.log(`\n${sendResult.message || sendResult.error}`);
+    if (!sendRes.ok) return;
+
+    const code = await prompt('ENTER VERIFICATION CODE: ');
+    const checkRes = await fetch(`${apiUrl}/verify/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email, purpose, code })
+    });
+    const checkResult = await checkRes.json();
+    if (!checkResult.verified) {
+      console.log(`\nERROR: ${checkResult.error || 'Verification failed.'}`);
+      return;
+    }
+
+    const actionToken = checkResult.actionToken;
+    let endpoint;
+    let body = new URLSearchParams({ actionToken });
+
+    if (purpose === 'change-password') {
+      endpoint = '/action/change-password';
+      const newPassword = await prompt('ENTER NEW PASSWORD: ');
+      const confirm = await prompt('CONFIRM NEW PASSWORD: ');
+      if (newPassword !== confirm) {
+        console.log('\nERROR: PASSWORDS DO NOT MATCH.');
+        return;
+      }
+      body.append('newPassword', newPassword);
+    } else if (purpose === 'update-email') {
+      endpoint = '/action/change-email';
+      const newEmail = await prompt('ENTER NEW EMAIL: ');
+      body.append('newEmail', newEmail);
+    } else if (purpose === 'unlock-account') {
+      endpoint = '/action/unlock-account';
+    } else if (purpose === 'logout-all') {
+      endpoint = '/action/logout-all';
+    }
+
+    const res = await fetch(`${apiUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${currentToken}` 
+      },
+      body
+    });
+    if (res.status === 401) {
+      console.log('\nSESSION EXPIRED OR REVOKED. PLEASE LOGIN AGAIN.');
+      currentToken = null;
+      await mainMenu();
+      return;
+    }
+    const result = await res.json();
+    console.log(`\n${result.message || result.error}`);
+  } catch (err) {
+    console.error('\nERROR:', err.message);
   }
 }
 

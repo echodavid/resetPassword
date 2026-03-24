@@ -31,7 +31,7 @@ class _ForgotScreenState extends State<ForgotScreen> {
         child: Column(
           children: [
             TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-            ElevatedButton(child: const Text('Send Reset Link'), onPressed: forgot),
+            ElevatedButton(child: const Text('Send Recovery Code'), onPressed: forgot),
             Text(message),
           ],
         ),

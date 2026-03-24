@@ -96,6 +96,30 @@ class _VerifyScreenState extends State<VerifyScreen> {
     });
   }
 
+  Future<void> logoutAll() async {
+    final res = await http.post(
+      Uri.parse('${Config.apiUrl}/action/logout-all'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {'actionToken': actionToken ?? ''},
+    );
+    final body = json.decode(res.body);
+    setState(() {
+      message = body['message'] ?? body['error'] ?? 'Unexpected response';
+    });
+  }
+
+  Future<void> unlockAccount() async {
+    final res = await http.post(
+      Uri.parse('${Config.apiUrl}/action/unlock-account'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {'actionToken': actionToken ?? ''},
+    );
+    final body = json.decode(res.body);
+    setState(() {
+      message = body['message'] ?? body['error'] ?? 'Unexpected response';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,6 +135,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 items: const [
                   DropdownMenuItem(value: 'change-password', child: Text('Change password')),
                   DropdownMenuItem(value: 'update-email', child: Text('Change email')),
+                  DropdownMenuItem(value: 'logout-all', child: Text('Logout all sessions')),
+                  DropdownMenuItem(value: 'unlock-account', child: Text('Unlock account')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -136,6 +162,14 @@ class _VerifyScreenState extends State<VerifyScreen> {
               if (purpose == 'update-email') ...[
                 TextField(controller: newEmailController, decoration: const InputDecoration(labelText: 'New email')),
                 ElevatedButton(onPressed: changeEmail, child: const Text('Change email')),
+              ],
+              if (purpose == 'logout-all') ...[
+                const Text('Confirm closing all sessions:'),
+                ElevatedButton(onPressed: logoutAll, child: const Text('Logout All Sessions')),
+              ],
+              if (purpose == 'unlock-account') ...[
+                const Text('Confirm unlocking account:'),
+                ElevatedButton(onPressed: unlockAccount, child: const Text('Unlock Account')),
               ],
             ],
             const SizedBox(height: 16),

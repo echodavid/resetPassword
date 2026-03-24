@@ -1,64 +1,58 @@
-// Reset page migrated to Vite
+// Reset page: verification-based recovery
 export function Reset() {
   const container = document.createElement('div');
   container.className = 'container';
   container.innerHTML = `
-    <h1>Enter New Password</h1>
-    <div id="policy" class="message" style="margin-bottom: 16px;"></div>
-    <div id="tokenError" class="message" style="color: red; margin-bottom: 16px; display: none;"></div>
-    <form id="resetForm" style="display: none;">
-      <div class="password-container">
-        <input type="password" name="newPassword" placeholder="New Password" required>
-        <button type="button" class="toggle-password">Show</button>
-      </div>
-      <div class="password-container">
-        <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
-        <button type="button" class="toggle-password">Show</button>
-      </div>
-      <button type="submit">Reset Password</button>
-    </form>
+    <h1>Reset Password</h1>
+    <div id="message" class="message" style="margin-bottom: 16px;"></div>
+
+    <div id="step-verify">
+      <p>Enter your email and the 6-digit recovery code sent to you.</p>
+      <form id="verifyForm">
+        <input type="email" name="email" placeholder="Email" required style="margin-bottom: 8px;">
+        <input type="text" name="code" placeholder="Recovery code" required style="margin-bottom: 16px;">
+        <button type="submit">Verify Code</button>
+      </form>
+    </div>
+
+    <div id="step-action" style="display: none;">
+      <p>Set your new password:</p>
+      <form id="actionForm">
+        <div class="password-container">
+          <input type="password" name="newPassword" placeholder="New password" required>
+          <button type="button" class="toggle-password">Show</button>
+        </div>
+        <div class="password-container">
+          <input type="password" name="confirmPassword" placeholder="Confirm password" required>
+          <button type="button" class="toggle-password">Show</button>
+        </div>
+        <button type="submit">Update Password</button>
+      </form>
+    </div>
   `;
 
-  // Support token from hash or search
-  let token = null;
-  const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-  token = hashParams.get('token');
-  if (!token) {
-    token = new URLSearchParams(window.location.search).get('token');
-  }
+  const messageEl = container.querySelector('#message');
+  const verifyForm = container.querySelector('#verifyForm');
+  const actionForm = container.querySelector('#actionForm');
+  const stepVerify = container.querySelector('#step-verify');
+  const stepAction = container.querySelector('#step-action');
 
-  // Validate token with backend
-  fetch(import.meta.env.VITE_API_URL + '/validate-token', {
-    method: 'POST',
-    body: new URLSearchParams({ token }),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.valid) {
-        container.querySelector('#resetForm').style.display = '';
-        container.querySelector('#tokenError').style.display = 'none';
-      } else {
-        container.querySelector('#resetForm').style.display = 'none';
-        container.querySelector('#tokenError').innerText = data.error || 'Invalid or expired token.';
-        container.querySelector('#tokenError').style.display = '';
-      }
-    })
-    .catch(() => {
-      container.querySelector('#resetForm').style.display = 'none';
-      container.querySelector('#tokenError').innerText = 'Invalid or expired token.';
-      container.querySelector('#tokenError').style.display = '';
-    });
+  let savedEmail = '';
+  let actionToken = null;
 
-  // Fetch password policy from backend
-  fetch(import.meta.env.VITE_API_URL + '/policy')
-    .then(res => res.json())
-    .then(data => {
-      container.querySelector('#policy').innerText = data.policy || 'Password must meet the required policy.';
-    })
-    .catch(() => {
-      container.querySelector('#policy').innerText = 'Password must meet the required policy.';
-    });
+  const setMessage = (text) => {
+    messageEl.innerText = text;
+    messageEl.style.fontWeight = 'bold';
+  };
+
+  // Pre-fill from URL parameters (#reset?email=...&code=...)
+  const hash = window.location.hash || '';
+  const searchParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+  const urlEmail = searchParams.get('email');
+  const urlCode = searchParams.get('code');
+
+  if (urlEmail) verifyForm.email.value = urlEmail;
+  if (urlCode) verifyForm.code.value = urlCode;
 
   const openEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5zM8 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
   const closedEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5z"/><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
@@ -76,32 +70,55 @@ export function Reset() {
     });
   });
 
-  container.querySelector('#resetForm').addEventListener('submit', async (e) => {
+  verifyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const messageDiv = container.querySelector('#policy');
-    const data = new URLSearchParams();
-    data.append('token', token);
-    data.append('password', e.target.newPassword.value);
-    if (e.target.newPassword.value !== e.target.confirmPassword.value) {
-      messageDiv.innerText = 'Passwords do not match.';
-      messageDiv.style.color = 'red';
+    savedEmail = e.target.email.value.trim();
+    const code = e.target.code.value.trim();
+    try {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/verify/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ email: savedEmail, purpose: 'recovery', code })
+      });
+      const result = await res.json();
+      if (result.verified) {
+        actionToken = result.actionToken;
+        setMessage('Code verified! Set your new password.', 'green');
+        stepVerify.style.display = 'none';
+        stepAction.style.display = '';
+      } else {
+        setMessage(result.error || 'Invalid code.', 'red');
+      }
+    } catch (err) {
+      setMessage('Network error.', 'red');
+    }
+  });
+
+  actionForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = e.target.newPassword.value;
+    const confirm = e.target.confirmPassword.value;
+    if (password !== confirm) {
+      setMessage('Passwords do not match.', 'red');
       return;
     }
-    const res = await fetch(import.meta.env.VITE_API_URL + '/reset', {
-      method: 'POST',
-      body: data,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-    const result = await res.json();
-    if (result.error) {
-      messageDiv.innerText = result.error;
-      messageDiv.style.color = 'red';
-    } else if (result.message) {
-      messageDiv.innerText = result.message;
-      messageDiv.style.color = 'green';
-      setTimeout(() => {
-        window.location.hash = '#login';
-      }, 1500);
+
+    try {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: actionToken, password })
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setMessage(result.message, 'green');
+        stepAction.style.display = 'none';
+        setTimeout(() => { window.location.hash = '#login'; }, 2000);
+      } else {
+        setMessage(result.error || 'Error updating password.', 'red');
+      }
+    } catch (err) {
+      setMessage('Network error.', 'red');
     }
   });
 

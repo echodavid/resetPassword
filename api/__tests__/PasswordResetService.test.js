@@ -7,7 +7,7 @@ describe('PasswordResetService', () => {
 
   beforeEach(() => {
     db = new Database(':memory:');
-    db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT)`);
+    db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, locked INTEGER DEFAULT 0, session_version INTEGER DEFAULT 0)`);
     service = new PasswordResetService(db);
   });
 
@@ -49,5 +49,19 @@ describe('PasswordResetService', () => {
     db.prepare('INSERT INTO users (email, password) VALUES (?, ?)').run('test@example.com', 'invalidhash');
     const user = await service.authenticateUser('test@example.com', 'password');
     expect(user).toBeNull();
+  });
+
+  test('unlockUser should set locked to 0', async () => {
+    db.prepare('INSERT INTO users (email, password, locked) VALUES (?, ?, ?)').run('locked@example.com', 'hash', 1);
+    await service.unlockUser('locked@example.com');
+    const row = db.prepare('SELECT locked FROM users WHERE email = ?').get('locked@example.com');
+    expect(row.locked).toBe(0);
+  });
+
+  test('invalidateSessions should increment session_version', async () => {
+    db.prepare('INSERT INTO users (email, password, session_version) VALUES (?, ?, ?)').run('session@example.com', 'hash', 1);
+    await service.invalidateSessions('session@example.com');
+    const row = db.prepare('SELECT session_version FROM users WHERE email = ?').get('session@example.com');
+    expect(row.session_version).toBe(2);
   });
 });
