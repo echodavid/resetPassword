@@ -33,18 +33,18 @@ class _ResetScreenState extends State<ResetScreen> {
       setState(() {
         isVerified = true;
         actionToken = data['actionToken'];
-        message = 'Code verified! Set your new password.';
+        message = '¡Código verificado! Establece tu nueva contraseña.';
       });
     } else {
       setState(() {
-        message = data['error'] ?? 'Verification failed';
+        message = data['error'] ?? 'Falló la verificación';
       });
     }
   }
 
   Future<void> reset() async {
     if (passwordController.text != confirmController.text) {
-      setState(() { message = 'Passwords do not match'; });
+      setState(() { message = 'Las contraseñas no coinciden'; });
       return;
     }
     final res = await http.post(
@@ -57,7 +57,7 @@ class _ResetScreenState extends State<ResetScreen> {
     );
     final data = json.decode(res.body);
     setState(() {
-      message = data['message'] ?? data['error'] ?? 'Error updating password';
+      message = data['message'] ?? data['error'] ?? 'Error al actualizar la contraseña';
     });
     if (res.statusCode == 200) {
       Future.delayed(const Duration(seconds: 2), () {
@@ -69,22 +69,22 @@ class _ResetScreenState extends State<ResetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
+      appBar: AppBar(title: const Text('Restablecer Contraseña')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
             children: [
               if (!isVerified) ...[
-                TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-                TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Recovery Code')),
+                TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Correo electrónico')),
+                TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Código de recuperación')),
                 const SizedBox(height: 16),
-                ElevatedButton(onPressed: verifyCode, child: const Text('Verify Code')),
+                ElevatedButton(onPressed: verifyCode, child: const Text('Verificar Código')),
               ] else ...[
-                TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'New Password'), obscureText: true),
-                TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
+                TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Nueva contraseña'), obscureText: true),
+                TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirmar contraseña'), obscureText: true),
                 const SizedBox(height: 16),
-                ElevatedButton(onPressed: reset, child: const Text('Update Password')),
+                ElevatedButton(onPressed: reset, child: const Text('Actualizar Contraseña')),
               ],
               const SizedBox(height: 16),
               Text(message, style: TextStyle(color: message.contains('Error') || message.contains('failed') ? Colors.red : Colors.green)),

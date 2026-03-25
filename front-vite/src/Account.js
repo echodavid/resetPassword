@@ -18,17 +18,17 @@ export function Account() {
   });
 
   container.innerHTML = `
-    <h1>My Account</h1>
-    <p>Logged in as <strong>${userEmail}</strong></p>
+    <h1>Mi Cuenta</h1>
+    <p>Sesión iniciada como <strong>${userEmail}</strong></p>
 
     <div class="account-actions">
-      <button id="changePasswordBtn">Change password</button>
-      <button id="changeEmailBtn">Change email</button>
-      <button id="logoutAllBtn">Logout all sessions</button>
-      <button id="unlockAccountBtn">Unlock account</button>
+      <button id="changePasswordBtn">Cambiar contraseña</button>
+      <button id="changeEmailBtn">Cambiar correo</button>
+      <button id="logoutAllBtn">Cerrar todas las sesiones</button>
+      <button id="unlockAccountBtn">Desbloquear cuenta</button>
     </div>
 
-    <button id="logoutBtn" style="margin-top: 16px;">Logout</button>
+    <button id="logoutBtn" style="margin-top: 16px;">Cerrar Sesión</button>
   `;
 
   const logout = async () => {

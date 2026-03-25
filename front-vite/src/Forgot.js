@@ -5,13 +5,13 @@ export function Forgot() {
   const container = document.createElement('div');
   container.className = 'container';
   container.innerHTML = `
-    <h1>Reset Password</h1>
+    <h1>Restablecer Contraseña</h1>
     <div id="message" class="message" style="margin-bottom: 16px;"></div>
     <form id="forgotForm">
-      <input type="text" name="email" placeholder="Enter your email" required>
-      <button type="submit" id="submitBtn">Send Recovery Code</button>
+      <input type="text" name="email" placeholder="Ingresa tu correo" required>
+      <button type="submit" id="submitBtn">Enviar Código de Recuperación</button>
     </form>
-    <p><a href="#login">Back to Login</a></p>
+    <p><a href="#login">Volver al Inicio</a></p>
   `;
 
   const messageEl = container.querySelector('#message');
@@ -26,7 +26,7 @@ export function Forgot() {
     const form = e.target;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending...';
+    submitBtn.textContent = 'Enviando...';
     setMessage('');
 
     try {
@@ -40,18 +40,18 @@ export function Forgot() {
       const result = await res.json();
 
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Recovery Code';
+      submitBtn.textContent = 'Enviar Código de Recuperación';
 
       if (res.ok) {
         setMessage(result.message);
         setTimeout(() => { window.location.hash = '#reset'; }, 1500);
       } else {
-        setMessage(result.error || 'Error sending code.');
+        setMessage(result.error || 'Error al enviar el código.');
       }
     } catch (error) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Recovery Code';
-      setMessage('Network error.');
+      submitBtn.textContent = 'Enviar Código de Recuperación';
+      setMessage('Error de red.');
     }
   });
 

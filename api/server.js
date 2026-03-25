@@ -47,7 +47,7 @@ function requireSession(req, res) {
 	const token = getSessionToken(req);
 	const session = validateSession(token);
 	if (!session) {
-		res.status(401).json({ error: 'Unauthorized. Please login.' });
+		res.status(401).json({ error: 'No autorizado. Por favor inicia sesión.' });
 		return null;
 	}
 	return session;
@@ -121,7 +121,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Password policy endpoint
 app.get('/policy', (req, res) => {
 	res.json({
-		policy: 'Password must be at least 12 characters, include at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&).'
+		policy: 'La contraseña debe tener al menos 12 caracteres, incluir al menos una letra mayúscula, una letra minúscula, un número y un carácter especial (@$!%*?&).'
 	});
 });
 
@@ -131,42 +131,42 @@ app.get('/forgot', (req, res) => res.sendFile(__dirname + '/public/forgot.html')
 // Endpoint: Login
 app.post('/login', async (req, res) => {
 	const { email, password } = req.body;
-	if (!email || !password) return res.status(400).json({ error: 'Email and password required.' });
-	if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format.' });
-	if (rateLimiter.checkRateLimit(getIP(req), 'login')) return res.status(429).json({ error: 'Too many requests.' });
+	if (!email || !password) return res.status(400).json({ error: 'Correo y contraseña requeridos.' });
+	if (!emailRegex.test(email)) return res.status(400).json({ error: 'Formato de correo inválido.' });
+	if (rateLimiter.checkRateLimit(getIP(req), 'login')) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
 	try {
 		const user = await passwordService.authenticateUser(email, password);
 		auditService.log('login', email, getIP(req), user ? 'success' : 'fail');
-		if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
+		if (!user) return res.status(401).json({ error: 'Credenciales inválidas.' });
 		const sessionToken = createSession(email);
-		return res.json({ message: 'Login successful.', sessionToken });
+		return res.json({ message: 'Inicio de sesión exitoso.', sessionToken });
 	} catch (e) {
 		console.error('Login error:', e);
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 
 // Endpoint: Register
 app.post('/register', async (req, res) => {
 	const { email, password } = req.body;
-	if (!email || !password) return res.status(400).json({ error: 'Email and password required.' });
-	if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format.' });
-	if (!passwordRegex.test(password)) return res.status(400).json({ error: 'Password does not meet policy.' });
+	if (!email || !password) return res.status(400).json({ error: 'Correo y contraseña requeridos.' });
+	if (!emailRegex.test(email)) return res.status(400).json({ error: 'Formato de correo inválido.' });
+	if (!passwordRegex.test(password)) return res.status(400).json({ error: 'La contraseña no cumple con la política.' });
 	try {
-		if (passwordService.userExists(email)) return res.status(409).json({ error: 'User already exists.' });
+		if (passwordService.userExists(email)) return res.status(409).json({ error: 'El usuario ya existe.' });
 		await passwordService.registerUser(email, password);
 		auditService.log('register', email, getIP(req), 'success');
-		return res.json({ message: 'Registration successful.' });
+		return res.json({ message: 'Registro exitoso.' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 
 // Endpoint: Forgot password (request reset)
 app.post('/forgot', async (req, res) => {
 	const { email } = req.body;
-	if (!email) return res.status(400).json({ error: 'Email required.' });
-	if (rateLimiter.checkRateLimit(getIP(req), 'forgot')) return res.status(429).json({ error: 'Too many requests.' });
+	if (!email) return res.status(400).json({ error: 'Correo requerido.' });
+	if (rateLimiter.checkRateLimit(getIP(req), 'forgot')) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
 	try {
 		// Always respond generic
 		if (passwordService.userExists(email)) {
@@ -180,13 +180,13 @@ app.post('/forgot', async (req, res) => {
 			
 			await transporter.sendMail({
 				to: email,
-				subject: 'Password Recovery Link',
+				subject: 'Enlace de Recuperación de Contraseña',
 				html: `
-					<p>You requested a password recovery.</p>
-					<p>Click the link below to reset your password:</p>
+					<p>Has solicitado la recuperación de tu contraseña.</p>
+					<p>Haz clic en el enlace de abajo para restablecerla:</p>
 					<p><a href="${recoveryLink}">${recoveryLink}</a></p>
-					<p>Or use this 6-digit code: <b>${code}</b></p>
-					<p>This code expires in 5 minutes.</p>
+					<p>O utiliza este código de 6 dígitos: <b>${code}</b></p>
+					<p>Este código expira en 5 minutos.</p>
 				`
 			});
 			auditService.log('forgot', email, getIP(req), 'link sent');
@@ -203,9 +203,9 @@ app.post('/forgot', async (req, res) => {
 app.post('/verify/send', async (req, res) => {
 	const { email, purpose } = req.body;
 	const allowed = new Set(['change-password', 'update-email', 'logout-all', 'unlock-account', 'recovery']);
-	if (!email || !purpose) return res.status(400).json({ error: 'Email and purpose required.' });
-	if (!allowed.has(purpose)) return res.status(400).json({ error: 'Invalid purpose.' });
-	if (rateLimiter.checkRateLimit(getIP(req), 'verify-send')) return res.status(429).json({ error: 'Too many requests.' });
+	if (!email || !purpose) return res.status(400).json({ error: 'Correo y propósito requeridos.' });
+	if (!allowed.has(purpose)) return res.status(400).json({ error: 'Propósito inválido.' });
+	if (rateLimiter.checkRateLimit(getIP(req), 'verify-send')) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
 	try {
 		if (passwordService.userExists(email)) {
 			const code = verificationService.generateCode();
@@ -215,8 +215,8 @@ app.post('/verify/send', async (req, res) => {
 			const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
 			await transporter.sendMail({
 				to: email,
-				subject: 'Verification Code',
-				html: `Your verification code is <b>${code}</b>. It expires in 5 minutes.`
+				subject: 'Código de Verificación',
+				html: `Tu código de verificación es <b>${code}</b>. Expira en 5 minutos.`
 			});
 			auditService.log('verify_send', email, getIP(req), `purpose=${purpose}`);
 		} else {
@@ -231,8 +231,8 @@ app.post('/verify/send', async (req, res) => {
 // Endpoint: Verify identity (check code)
 app.post('/verify/check', async (req, res) => {
 	const { email, purpose, code } = req.body;
-	if (!email || !purpose || !code) return res.status(400).json({ error: 'Email, purpose and code required.' });
-	if (rateLimiter.checkRateLimit(getIP(req), 'verify-check')) return res.status(429).json({ error: 'Too many requests.' });
+	if (!email || !purpose || !code) return res.status(400).json({ error: 'Correo, propósito y código requeridos.' });
+	if (rateLimiter.checkRateLimit(getIP(req), 'verify-check')) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
 	try {
 		const result = verificationService.validateCode(email, purpose, code);
 		auditService.log('verify_check', email, getIP(req), `purpose=${purpose} status=${result.status}`);
@@ -242,8 +242,8 @@ app.post('/verify/check', async (req, res) => {
 			actionTokenService.storeToken(tokenHash, email, purpose);
 			return res.json({ verified: true, actionToken });
 		}
-		if (result.status === 'too_many_attempts') return res.status(429).json({ error: 'Too many attempts. Try again later.' });
-		return res.status(400).json({ error: 'Invalid code.' });
+		if (result.status === 'too_many_attempts') return res.status(429).json({ error: 'Demasiados intentos. Inténtalo más tarde.' });
+		return res.status(400).json({ error: 'Código inválido.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
 	}
@@ -259,7 +259,7 @@ app.post('/reset', async (req, res) => {
 		const tokenRow = actionTokenService.validateToken(hash);
 		if (!tokenRow || tokenRow.purpose !== 'recovery') {
 			auditService.log('reset', 'unknown', getIP(req), 'invalid token');
-			return res.status(400).json({ error: 'Invalid or expired action token.' });
+			return res.status(400).json({ error: 'Token de acción inválido o expirado.' });
 		}
 		
 		db.transaction(() => {
@@ -270,7 +270,7 @@ app.post('/reset', async (req, res) => {
 			auditService.log('reset', tokenRow.email, getIP(req), 'success');
 		})();
 		
-		return res.json({ message: 'Password reset successful.' });
+		return res.json({ message: 'Contraseña restablecida con éxito.' });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error.' });
 	}
@@ -279,10 +279,10 @@ app.post('/reset', async (req, res) => {
 // Validate reset token endpoint
 app.post('/validate-token', (req, res) => {
 	const { token } = req.body;
-	if (!token) return res.status(400).json({ error: 'Token required.' });
+	if (!token) return res.status(400).json({ error: 'Token requerido.' });
 	const tokenHash = tokenService.hashToken(token);
 	const tokenRow = tokenService.validateToken(tokenHash);
-	if (!tokenRow) return res.status(400).json({ error: 'Invalid or expired token.' });
+	if (!tokenRow) return res.status(400).json({ error: 'Token inválido o expirado.' });
 	return res.json({ valid: true });
 });
 
@@ -300,7 +300,7 @@ app.post('/action/change-password', async (req, res) => {
 	try {
 		const hash = actionTokenService.hashToken(actionToken);
 		const tokenRow = actionTokenService.validateToken(hash);
-		if (!tokenRow || tokenRow.purpose !== 'change-password') return res.status(400).json({ error: 'Invalid or expired action token.' });
+		if (!tokenRow || tokenRow.purpose !== 'change-password') return res.status(400).json({ error: 'Token de acción inválido o expirado.' });
 		
 		db.transaction(() => {
 			// Consume token so it cannot be reused
@@ -310,9 +310,9 @@ app.post('/action/change-password', async (req, res) => {
 			auditService.log('change-password', tokenRow.email, getIP(req), 'success');
 		})();
 		
-		return res.json({ message: 'Password changed successfully.' });
+		return res.json({ message: 'Contraseña cambiada con éxito.' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 
@@ -323,8 +323,8 @@ app.post('/action/change-email', async (req, res) => {
 	try {
 		const hash = actionTokenService.hashToken(actionToken);
 		const tokenRow = actionTokenService.validateToken(hash);
-		if (!tokenRow || tokenRow.purpose !== 'update-email') return res.status(400).json({ error: 'Invalid or expired action token.' });
-		if (passwordService.userExists(newEmail)) return res.status(409).json({ error: 'Email already in use.' });
+		if (!tokenRow || tokenRow.purpose !== 'update-email') return res.status(400).json({ error: 'Token de acción inválido o expirado.' });
+		if (passwordService.userExists(newEmail)) return res.status(409).json({ error: 'Email ya en uso.' });
 		
 		db.transaction(() => {
 			// Consume token so it cannot be reused
@@ -340,9 +340,9 @@ app.post('/action/change-email', async (req, res) => {
 			auditService.log('change-email', oldEmail, getIP(req), `to=${newEmail}`);
 		})();
 		
-		return res.json({ message: 'Email updated successfully.' });
+		return res.json({ message: 'Email actualizado con éxito.' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 
@@ -352,7 +352,7 @@ app.post('/action/unlock-account', async (req, res) => {
 	try {
 		const hash = actionTokenService.hashToken(actionToken);
 		const tokenRow = actionTokenService.validateToken(hash);
-		if (!tokenRow || tokenRow.purpose !== 'unlock-account') return res.status(400).json({ error: 'Invalid or expired action token.' });
+		if (!tokenRow || tokenRow.purpose !== 'unlock-account') return res.status(400).json({ error: 'Token de acción inválido o expirado.' });
 		
 		db.transaction(() => {
 			actionTokenService.consumeToken(hash);
@@ -361,9 +361,9 @@ app.post('/action/unlock-account', async (req, res) => {
 			auditService.log('unlock-account', tokenRow.email, getIP(req), 'success');
 		})();
 		
-		return res.json({ message: 'Account unlocked successfully.' });
+		return res.json({ message: 'Cuenta desbloqueada con éxito.' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 
@@ -373,7 +373,7 @@ app.post('/action/logout-all', async (req, res) => {
 	try {
 		const hash = actionTokenService.hashToken(actionToken);
 		const tokenRow = actionTokenService.validateToken(hash);
-		if (!tokenRow || tokenRow.purpose !== 'logout-all') return res.status(400).json({ error: 'Invalid or expired action token.' });
+		if (!tokenRow || tokenRow.purpose !== 'logout-all') return res.status(400).json({ error: 'Token de acción inválido o expirado.' });
 		
 		db.transaction(() => {
 			actionTokenService.consumeToken(hash);
@@ -381,9 +381,9 @@ app.post('/action/logout-all', async (req, res) => {
 			auditService.log('logout-all', tokenRow.email, getIP(req), 'success');
 		})();
 		
-		return res.json({ message: 'All sessions closed successfully.' });
+		return res.json({ message: 'Todas las sesiones cerradas con éxito.' });
 	} catch (e) {
-		return res.status(500).json({ error: 'Internal error.' });
+		return res.status(500).json({ error: 'Error interno.' });
 	}
 });
 

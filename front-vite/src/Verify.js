@@ -3,51 +3,51 @@ export function Verify() {
   const container = document.createElement('div');
   container.className = 'container';
   container.innerHTML = `
-    <h1>Verify Identity</h1>
+    <h1>Verificar Identidad</h1>
     <div id="message" class="message" style="margin-bottom: 16px;"></div>
 
     <div id="step-send">
-      <p>Select the action you want to perform and provide the current account email.</p>
+      <p>Selecciona la acción que deseas realizar y proporciona el correo de tu cuenta.</p>
       <form id="sendForm">
         <label>
-          Action:
+          Acción:
           <select name="purpose">
-            <option value="change-password">Reset Password</option>
-            <option value="update-email">Update Email Address</option>
-            <option value="logout-all">Sign Out Everywhere</option>
-            <option value="unlock-account">Unlock Account</option>
+            <option value="change-password">Restablecer Contraseña</option>
+            <option value="update-email">Actualizar Correo</option>
+            <option value="logout-all">Cerrar Sesión en Todos Lados</option>
+            <option value="unlock-account">Desbloquear Cuenta</option>
           </select>
         </label>
-        <input type="text" name="email" placeholder="Email" required>
-        <button type="submit">Send verification code</button>
+        <input type="text" name="email" placeholder="Correo electrónico" required>
+        <button type="submit">Enviar código de verificación</button>
       </form>
     </div>
 
     <div id="step-verify" style="display: none;">
-      <p>Enter the 6-digit verification code sent to your email.</p>
+      <p>Ingresa el código de verificación de 6 dígitos que enviamos a tu correo.</p>
       <form id="verifyForm">
-        <input type="text" name="code" placeholder="Verification code" required>
-        <button type="submit">Verify code</button>
+        <input type="text" name="code" placeholder="Código de verificación" required>
+        <button type="submit">Verificar código</button>
       </form>
     </div>
 
     <div id="step-action" style="display: none;">
-      <p id="actionPrompt">Set a new password for your account:</p>
+      <p id="actionPrompt">Establece una nueva contraseña para tu cuenta:</p>
       <form id="actionForm">
         <div id="action-password" class="action-block">
           <div class="password-container">
-            <input type="password" name="newPassword" placeholder="New password" required>
-            <button type="button" class="toggle-password">Show</button>
+            <input type="password" name="newPassword" placeholder="Nueva contraseña" required>
+            <button type="button" class="toggle-password">Ver</button>
           </div>
           <div class="password-container">
-            <input type="password" name="confirmPassword" placeholder="Confirm password" required>
-            <button type="button" class="toggle-password">Show</button>
+            <input type="password" name="confirmPassword" placeholder="Confirmar contraseña" required>
+            <button type="button" class="toggle-password">Ver</button>
           </div>
         </div>
         <div id="action-email" class="action-block" style="display:none;">
-          <input type="email" name="newEmail" placeholder="New email" required>
+          <input type="email" name="newEmail" placeholder="Nuevo correo" required>
         </div>
-        <button type="submit">Execute action</button>
+        <button type="submit">Ejecutar acción</button>
       </form>
     </div>
   `;
@@ -119,32 +119,32 @@ export function Verify() {
     if (purpose === 'update-email') {
       passwordBlock.style.display = 'none';
       emailBlock.style.display = '';
-      prompt.innerText = 'Confirm the new email address:';
-      submitBtn.innerText = 'Update Email';
+      prompt.innerText = 'Confirma la nueva dirección de correo:';
+      submitBtn.innerText = 'Actualizar Correo';
       newPasswordInput.disabled = true;
       confirmPasswordInput.disabled = true;
       newEmailInput.disabled = false;
     } else if (purpose === 'logout-all') {
       passwordBlock.style.display = 'none';
       emailBlock.style.display = 'none';
-      prompt.innerText = 'Press below to sign out from all active sessions.';
-      submitBtn.innerText = 'Sign Out Everywhere';
+      prompt.innerText = 'Presiona abajo para cerrar sesión en todas las sesiones activas.';
+      submitBtn.innerText = 'Cerrar Todas las Sesiones';
       newPasswordInput.disabled = true;
       confirmPasswordInput.disabled = true;
       newEmailInput.disabled = true;
     } else if (purpose === 'unlock-account') {
       passwordBlock.style.display = 'none';
       emailBlock.style.display = 'none';
-      prompt.innerText = 'Press below to unlock this account.';
-      submitBtn.innerText = 'Unlock Account';
+      prompt.innerText = 'Presiona abajo para desbloquear esta cuenta.';
+      submitBtn.innerText = 'Desbloquear Cuenta';
       newPasswordInput.disabled = true;
       confirmPasswordInput.disabled = true;
       newEmailInput.disabled = true;
     } else {
       passwordBlock.style.display = '';
       emailBlock.style.display = 'none';
-      prompt.innerText = 'Set a new password for your account:';
-      submitBtn.innerText = 'Reset Password';
+      prompt.innerText = 'Establece una nueva contraseña para tu cuenta:';
+      submitBtn.innerText = 'Restablecer Contraseña';
       newPasswordInput.disabled = false;
       confirmPasswordInput.disabled = false;
       newEmailInput.disabled = true;
@@ -156,7 +156,7 @@ export function Verify() {
     purpose = e.target.purpose.value;
     savedEmail = e.target.email.value.trim();
     if (!savedEmail) {
-      setMessage('Email is required.');
+      setMessage('El correo es requerido.');
       return;
     }
     try {
@@ -166,11 +166,11 @@ export function Verify() {
         body: new URLSearchParams({ email: savedEmail, purpose })
       });
       const result = await res.json();
-      setMessage(result.message || result.error || 'A code was sent if the account exists.');
+      setMessage(result.message || result.error || 'Se envió un código si la cuenta existe.');
       stepSend.style.display = 'none';
       stepVerify.style.display = '';
     } catch (err) {
-      setMessage('Failed to send verification code.');
+      setMessage('Error al enviar el código de verificación.');
     }
   });
 
@@ -178,7 +178,7 @@ export function Verify() {
     e.preventDefault();
     const code = e.target.code.value.trim();
     if (!code) {
-      setMessage('Enter the verification code.');
+      setMessage('Ingresa el código de verificación.');
       return;
     }
     try {
@@ -190,15 +190,15 @@ export function Verify() {
       const result = await res.json();
       if (result.verified) {
         actionToken = result.actionToken;
-        setMessage('Verified! You can now proceed.');
+        setMessage('¡Verificado! Ahora puedes proceder.');
         stepVerify.style.display = 'none';
         showActionFields();
         stepAction.style.display = '';
       } else {
-        setMessage(result.error || 'Invalid code.');
+        setMessage(result.error || 'Código inválido.');
       }
     } catch (err) {
-      setMessage('Failed to verify code.');
+      setMessage('Error al verificar el código.');
     }
   });
 
@@ -208,7 +208,7 @@ export function Verify() {
     submitButton.disabled = true;
 
     if (!actionToken) {
-      setMessage('Missing action token. Please verify code again.');
+      setMessage('Falta el token de acción. Por favor verifica el código de nuevo.');
       submitButton.disabled = false;
       return;
     }
@@ -219,7 +219,7 @@ export function Verify() {
     if (purpose === 'update-email') {
       const newEmail = e.target.newEmail.value.trim();
       if (!newEmail) {
-        setMessage('New email is required.');
+        setMessage('El nuevo correo es requerido.');
         submitButton.disabled = false;
         return;
       }
@@ -235,7 +235,7 @@ export function Verify() {
       const newPassword = e.target.newPassword.value;
       const confirmPassword = e.target.confirmPassword.value;
       if (newPassword !== confirmPassword) {
-        setMessage('Passwords do not match.');
+        setMessage('Las contraseñas no coinciden.');
         submitButton.disabled = false;
         return;
       }
@@ -255,10 +255,10 @@ export function Verify() {
         // Hide the form to show final state clearly
         stepAction.style.display = 'none';
       } else {
-        setMessage(result.error || `Could not complete action (status ${res.status}).`);
+        setMessage(result.error || `No se pudo completar la acción (estado ${res.status}).`);
       }
     } catch (err) {
-      setMessage('Failed to complete action.');
+      setMessage('Error al completar la acción.');
     }
     submitButton.disabled = false;
   });

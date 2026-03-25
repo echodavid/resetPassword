@@ -10,19 +10,19 @@ export function Login() {
   }
 
   container.innerHTML = `
-    <h1>Login</h1>
+    <h1>Iniciar Sesión</h1>
     <div id="message" class="message" style="margin-bottom: 16px;"></div>
     <form id="loginForm">
-      <input type="text" name="email" placeholder="Email" required>
+      <input type="text" name="email" placeholder="Correo electrónico" required>
       <div class="password-container">
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="button" class="toggle-password">Show</button>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="button" class="toggle-password">Ver</button>
       </div>
-      <button type="submit">Login</button>
+      <button type="submit">Entrar</button>
     </form>
-    <p><a href="#forgot">Forgot Password?</a></p>
-    <p><a href="#verify?purpose=unlock-account">Unlock account</a></p>
-    <p><a href="#register">Don't have an account? Register</a></p>
+    <p><a href="#forgot">¿Olvidaste tu contraseña?</a></p>
+    <p><a href="#verify?purpose=unlock-account">Desbloquear cuenta</a></p>
+    <p><a href="#register">¿No tienes cuenta? Registrate</a></p>
   `;
 
   const messageEl = container.querySelector('#message');
@@ -62,13 +62,13 @@ export function Login() {
       if (res.ok && result.sessionToken) {
         localStorage.setItem('sessionToken', result.sessionToken);
         localStorage.setItem('userEmail', e.target.email.value.trim());
-        setMessage(result.message || 'Login successful.');
+        setMessage(result.message || 'Inicio de sesión exitoso.');
         setTimeout(() => { window.location.hash = '#account'; }, 1000);
       } else {
-        setMessage(result.error || 'Login failed.');
+        setMessage(result.error || 'Error al iniciar sesión.');
       }
     } catch (err) {
-      setMessage('Network error.');
+      setMessage('Error de red.');
     }
   });
 

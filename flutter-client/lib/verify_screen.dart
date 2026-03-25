@@ -57,11 +57,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
       setState(() {
         actionToken = body['actionToken'];
         stage = 'action';
-        message = 'Code verified; you can now complete the action.';
+        message = 'Código verificado; ahora puedes completar la acción.';
       });
     } else {
       setState(() {
-        message = body['error'] ?? 'Invalid code.';
+        message = body['error'] ?? 'Código inválido.';
       });
     }
   }
@@ -123,7 +123,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify Identity')),
+      appBar: AppBar(title: const Text('Verificar Identidad')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -131,12 +131,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
             if (stage == 'send') ...[
               DropdownButtonFormField<String>(
                 value: purpose,
-                decoration: const InputDecoration(labelText: 'Action'),
+                decoration: const InputDecoration(labelText: 'Acción'),
                 items: const [
-                  DropdownMenuItem(value: 'change-password', child: Text('Change password')),
-                  DropdownMenuItem(value: 'update-email', child: Text('Change email')),
-                  DropdownMenuItem(value: 'logout-all', child: Text('Logout all sessions')),
-                  DropdownMenuItem(value: 'unlock-account', child: Text('Unlock account')),
+                  DropdownMenuItem(value: 'change-password', child: Text('Cambiar contraseña')),
+                  DropdownMenuItem(value: 'update-email', child: Text('Cambiar correo')),
+                  DropdownMenuItem(value: 'logout-all', child: Text('Cerrar todas las sesiones')),
+                  DropdownMenuItem(value: 'unlock-account', child: Text('Desbloquear cuenta')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -146,30 +146,30 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   }
                 },
               ),
-              TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Current email')),
-              ElevatedButton(onPressed: sendCode, child: const Text('Send verification code')),
+              TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Correo actual')),
+              ElevatedButton(onPressed: sendCode, child: const Text('Enviar código de verificación')),
             ],
             if (stage == 'verify') ...[
-              TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Verification code')),
-              ElevatedButton(onPressed: verifyCode, child: const Text('Verify code')),
+              TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Código de verificación')),
+              ElevatedButton(onPressed: verifyCode, child: const Text('Verificar código')),
             ],
             if (stage == 'action') ...[
               if (purpose == 'change-password') ...[
-                TextField(controller: newPasswordController, decoration: const InputDecoration(labelText: 'New password'), obscureText: true),
-                TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirm password'), obscureText: true),
-                ElevatedButton(onPressed: changePassword, child: const Text('Change password')),
+                TextField(controller: newPasswordController, decoration: const InputDecoration(labelText: 'Nueva contraseña'), obscureText: true),
+                TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirmar contraseña'), obscureText: true),
+                ElevatedButton(onPressed: changePassword, child: const Text('Cambiar contraseña')),
               ],
               if (purpose == 'update-email') ...[
-                TextField(controller: newEmailController, decoration: const InputDecoration(labelText: 'New email')),
-                ElevatedButton(onPressed: changeEmail, child: const Text('Change email')),
+                TextField(controller: newEmailController, decoration: const InputDecoration(labelText: 'Nuevo correo')),
+                ElevatedButton(onPressed: changeEmail, child: const Text('Cambiar correo')),
               ],
               if (purpose == 'logout-all') ...[
-                const Text('Confirm closing all sessions:'),
-                ElevatedButton(onPressed: logoutAll, child: const Text('Logout All Sessions')),
+                const Text('Confirmar cierre de todas las sesiones:'),
+                ElevatedButton(onPressed: logoutAll, child: const Text('Cerrar Todas las Sesiones')),
               ],
               if (purpose == 'unlock-account') ...[
-                const Text('Confirm unlocking account:'),
-                ElevatedButton(onPressed: unlockAccount, child: const Text('Unlock Account')),
+                const Text('Confirmar desbloqueo de cuenta:'),
+                ElevatedButton(onPressed: unlockAccount, child: const Text('Desbloquear Cuenta')),
               ],
             ],
             const SizedBox(height: 16),

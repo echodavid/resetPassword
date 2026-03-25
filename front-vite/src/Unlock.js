@@ -3,27 +3,27 @@ export function Unlock() {
   const container = document.createElement('div');
   container.className = 'container';
   container.innerHTML = `
-    <h1>Unlock Account</h1>
+    <h1>Desbloquear Cuenta</h1>
     <div id="message" class="message" style="margin-bottom: 16px;"></div>
 
     <div id="step-send">
-      <p>Enter your email to receive a verification code to unlock your account.</p>
+      <p>Ingresa tu correo para recibir un código de verificación y desbloquear tu cuenta.</p>
       <form id="sendForm">
-        <input type="text" name="email" placeholder="Email" required>
-        <button type="submit">Send verification code</button>
+        <input type="text" name="email" placeholder="Correo electrónico" required>
+        <button type="submit">Enviar código de verificación</button>
       </form>
     </div>
 
     <div id="step-verify" style="display: none;">
-      <p>Enter the 6-digit verification code sent to your email.</p>
+      <p>Ingresa el código de verificación de 6 dígitos enviado a tu correo.</p>
       <form id="verifyForm">
-        <input type="text" name="code" placeholder="Verification code" required>
-        <button type="submit">Unlock account</button>
+        <input type="text" name="code" placeholder="Código de verificación" required>
+        <button type="submit">Desbloquear cuenta</button>
       </form>
     </div>
 
     <div style="margin-top: 16px;">
-      <a href="#login">Back to login</a>
+      <a href="#login">Volver al inicio</a>
     </div>
   `;
 
@@ -44,7 +44,7 @@ export function Unlock() {
     e.preventDefault();
     email = e.target.email.value.trim();
     if (!email) {
-      setMessage('Email is required.');
+      setMessage('El correo es requerido.');
       return;
     }
 
@@ -55,13 +55,13 @@ export function Unlock() {
         body: new URLSearchParams({ email, purpose: 'unlock-account' })
       });
       const result = await res.json();
-      setMessage(result.message || result.error || 'A code was sent.');
+      setMessage(result.message || result.error || 'Se envió un código.');
       if (res.ok) {
         stepSend.style.display = 'none';
         stepVerify.style.display = '';
       }
     } catch (err) {
-      setMessage('Network error.');
+      setMessage('Error de red.');
     }
   });
 
@@ -69,7 +69,7 @@ export function Unlock() {
     e.preventDefault();
     const code = e.target.code.value.trim();
     if (!code) {
-      setMessage('Enter the verification code.');
+      setMessage('Ingresa el código de verificación.');
       return;
     }
 
@@ -82,7 +82,7 @@ export function Unlock() {
       const result = await res.json();
       if (res.ok && result.verified) {
         const actionToken = result.actionToken;
-        setMessage('Code verified! Unlocking...');
+        setMessage('¡Código verificado! Desbloqueando...');
         const unlockRes = await fetch(import.meta.env.VITE_API_URL + '/action/unlock-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -90,16 +90,16 @@ export function Unlock() {
         });
         const unlockResult = await unlockRes.json();
         if (unlockRes.ok) {
-          setMessage(unlockResult.message || 'Account unlocked.');
+          setMessage(unlockResult.message || 'Cuenta desbloqueada.');
           setTimeout(() => { window.location.hash = '#login'; }, 1500);
         } else {
-          setMessage(unlockResult.error || 'Failed to unlock.');
+          setMessage(unlockResult.error || 'Error al desbloquear.');
         }
       } else {
-        setMessage(result.error || 'Invalid code.');
+        setMessage(result.error || 'Código inválido.');
       }
     } catch (err) {
-      setMessage('Network error.');
+      setMessage('Error de red.');
     }
   });
 

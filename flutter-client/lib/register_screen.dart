@@ -16,7 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> register() async {
     if (passwordController.text != confirmController.text) {
-      setState(() { message = 'Passwords do not match'; });
+      setState(() { message = 'Las contraseñas no coinciden'; });
       return;
     }
     final res = await http.post(Uri.parse('${Config.apiUrl}/register'),
@@ -31,15 +31,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(title: const Text('Registro')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-            TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
-            ElevatedButton(child: const Text('Register'), onPressed: register),
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Correo electrónico')),
+            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Contraseña'), obscureText: true),
+            TextField(controller: confirmController, decoration: const InputDecoration(labelText: 'Confirmar contraseña'), obscureText: true),
+            ElevatedButton(child: const Text('Registrarse'), onPressed: register),
             Text(message),
           ],
         ),

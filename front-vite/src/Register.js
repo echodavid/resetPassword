@@ -3,22 +3,22 @@ export function Register() {
   const container = document.createElement('div');
   container.className = 'container';
   container.innerHTML = `
-    <h1>Register</h1>
+    <h1>Registro</h1>
     <div id="message" class="message" style="margin-bottom: 16px;"></div>
     <div id="policy" class="message" style="margin-bottom: 16px; font-size: 0.85em;"></div>
     <form id="registerForm">
-      <input type="text" name="email" placeholder="Email" required>
+      <input type="text" name="email" placeholder="Correo electrónico" required>
       <div class="password-container">
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="button" class="toggle-password">Show</button>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="button" class="toggle-password">Ver</button>
       </div>
       <div class="password-container">
-        <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
-        <button type="button" class="toggle-password">Show</button>
+        <input type="password" name="confirmPassword" placeholder="Confirmar contraseña" required>
+        <button type="button" class="toggle-password">Ver</button>
       </div>
-      <button type="submit">Register</button>
+      <button type="submit">Registrarse</button>
     </form>
-    <p><a href="#login">Already have an account? Login</a></p>
+    <p><a href="#login">¿Ya tienes cuenta? Iniciar sesión</a></p>
   `;
 
   const messageEl = container.querySelector('#message');
@@ -31,10 +31,10 @@ export function Register() {
   fetch(import.meta.env.VITE_API_URL + '/policy')
     .then(res => res.json())
     .then(data => {
-      container.querySelector('#policy').innerText = data.policy || 'Password must meet the required policy.';
+      container.querySelector('#policy').innerText = data.policy || 'La contraseña debe cumplir con la política requerida.';
     })
     .catch(() => {
-      container.querySelector('#policy').innerText = 'Password must meet the required policy.';
+      container.querySelector('#policy').innerText = 'La contraseña debe cumplir con la política requerida.';
     });
 
   const openEye = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2.5c-3.5 0-6.5 2-8 4.5 1.5 2.5 4.5 4.5 8 4.5s6.5-2 8-4.5c-1.5-2.5-4.5-4.5-8-4.5zM8 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
@@ -59,7 +59,7 @@ export function Register() {
     data.append('email', e.target.email.value);
     data.append('password', e.target.password.value);
     if (e.target.password.value !== e.target.confirmPassword.value) {
-      setMessage('Passwords do not match');
+      setMessage('Las contraseñas no coinciden');
       return;
     }
     try {
@@ -74,7 +74,7 @@ export function Register() {
         setTimeout(() => { window.location.hash = '#login'; }, 1500);
       }
     } catch (err) {
-      setMessage('Network error.');
+      setMessage('Error de red.');
     }
   });
 

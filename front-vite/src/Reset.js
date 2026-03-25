@@ -83,14 +83,14 @@ export function Reset() {
       const result = await res.json();
       if (result.verified) {
         actionToken = result.actionToken;
-        setMessage('Code verified! Set your new password.', 'green');
+        setMessage('¡Código verificado! Ahora establece tu nueva contraseña.', 'green');
         stepVerify.style.display = 'none';
         stepAction.style.display = '';
       } else {
-        setMessage(result.error || 'Invalid code.', 'red');
+        setMessage(result.error || 'Código inválido.', 'red');
       }
     } catch (err) {
-      setMessage('Network error.', 'red');
+      setMessage('Error de red.', 'red');
     }
   });
 
@@ -99,7 +99,7 @@ export function Reset() {
     const password = e.target.newPassword.value;
     const confirm = e.target.confirmPassword.value;
     if (password !== confirm) {
-      setMessage('Passwords do not match.', 'red');
+      setMessage('Las contraseñas no coinciden.', 'red');
       return;
     }
 
@@ -115,10 +115,10 @@ export function Reset() {
         stepAction.style.display = 'none';
         setTimeout(() => { window.location.hash = '#login'; }, 2000);
       } else {
-        setMessage(result.error || 'Error updating password.', 'red');
+        setMessage(result.error || 'Error al actualizar la contraseña.', 'red');
       }
     } catch (err) {
-      setMessage('Network error.', 'red');
+      setMessage('Error de red.', 'red');
     }
   });
 

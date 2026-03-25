@@ -15,18 +15,18 @@ function prompt(question) {
 let currentToken = null;
 
 async function mainMenu() {
-  console.log('\n--- PASSWORD RESET CLI ---');
-  console.log('1. LOGIN');
-  console.log('2. REGISTER');
-  console.log('3. FORGOT PASSWORD (REQUEST CODE)');
-  console.log('4. UNLOCK ACCOUNT (VERIFICATION CODE)');
-  console.log('0. EXIT');
+  console.log('\n--- CLI DE RESTABLECIMIENTO DE CONTRASEÑA ---');
+  console.log('1. INICIAR SESIÓN');
+  console.log('2. REGISTRARSE');
+  console.log('3. OLVIDÉ MI CONTRASEÑA (SOLICITAR CÓDIGO)');
+  console.log('4. DESBLOQUEAR CUENTA (CÓDIGO DE VERIFICACIÓN)');
+  console.log('0. SALIR');
   
   const choice = await prompt('\nCHOOSE AN OPTION: ');
   
   if (choice === '1') {
-    const email = await prompt('EMAIL: ');
-    const password = await prompt('PASSWORD: ');
+    const email = await prompt('CORREO ELECTRÓNICO: ');
+    const password = await prompt('CONTRASEÑA: ');
     try {
       const res = await fetch(`${apiUrl}/login`, {
         method: 'POST',
@@ -35,23 +35,23 @@ async function mainMenu() {
       });
       const result = await res.json();
       if (res.ok && result.sessionToken) {
-        console.log('\nLOGIN SUCCESSFUL.');
+        console.log('\nINICIO DE SESIÓN EXITOSO.');
         currentToken = result.sessionToken;
         await accountMenu(email, result.sessionToken);
       } else {
-        console.log(`\nERROR: ${result.error || 'Login failed.'}`);
+        console.log(`\nERROR: ${result.error || 'Error al iniciar sesión.'}`);
         await mainMenu();
       }
     } catch (err) {
-      console.error('\nNETWORK ERROR:', err.message);
+      console.error('\nERROR DE RED:', err.message);
       await mainMenu();
     }
   } else if (choice === '2') {
-    const email = await prompt('EMAIL: ');
-    const password = await prompt('PASSWORD: ');
-    const confirm = await prompt('CONFIRM PASSWORD: ');
+    const email = await prompt('CORREO ELECTRÓNICO: ');
+    const password = await prompt('CONTRASEÑA: ');
+    const confirm = await prompt('CONFIRMAR CONTRASEÑA: ');
     if (password !== confirm) {
-      console.log('\nERROR: PASSWORDS DO NOT MATCH.');
+      console.log('\nERROR: LAS CONTRASEÑAS NO COINCIDEN.');
       await mainMenu();
       return;
     }
@@ -68,7 +68,7 @@ async function mainMenu() {
     }
     await mainMenu();
   } else if (choice === '3') {
-    const email = await prompt('EMAIL: ');
+    const email = await prompt('CORREO ELECTRÓNICO: ');
     try {
       const res = await fetch(`${apiUrl}/forgot`, {
         method: 'POST',
@@ -78,7 +78,7 @@ async function mainMenu() {
       const result = await res.json();
       console.log(`\n${result.message || result.error}`);
       if (res.ok) {
-        console.log('\nPROCEEDING TO RESET STEP...');
+        console.log('\nPROCEDIENDO AL PASO DE RESTABLECIMIENTO...');
         await resetPasswordFlow(email);
       }
     } catch (err) {
@@ -128,7 +128,7 @@ async function accountMenu(email, sessionToken) {
 }
 
 async function resetPasswordFlow(email) {
-  const code = await prompt('ENTER THE RECOVERY CODE: ');
+  const code = await prompt('INGRESA EL CÓDIGO DE RECUPERACIÓN: ');
   try {
     const checkRes = await fetch(`${apiUrl}/verify/check`, {
       method: 'POST',
@@ -141,8 +141,8 @@ async function resetPasswordFlow(email) {
       return;
     }
     
-    const password = await prompt('ENTER NEW PASSWORD: ');
-    const confirm = await prompt('CONFIRM NEW PASSWORD: ');
+    const password = await prompt('INGRESA LA NUEVA CONTRASEÑA: ');
+    const confirm = await prompt('CONFIRMA LA NUEVA CONTRASEÑA: ');
     if (password !== confirm) {
       console.log('\nERROR: PASSWORDS DO NOT MATCH.');
       return;
@@ -161,7 +161,7 @@ async function resetPasswordFlow(email) {
 }
 
 async function verificationWorkflow(purpose, prefilledEmail = null) {
-  const email = prefilledEmail || await prompt('ENTER EMAIL: ');
+  const email = prefilledEmail || await prompt('INGRESA EL CORREO ELECTRÓNICO: ');
   
   try {
     const sendRes = await fetch(`${apiUrl}/verify/send`, {
@@ -173,7 +173,7 @@ async function verificationWorkflow(purpose, prefilledEmail = null) {
     console.log(`\n${sendResult.message || sendResult.error}`);
     if (!sendRes.ok) return;
 
-    const code = await prompt('ENTER VERIFICATION CODE: ');
+    const code = await prompt('INGRESA EL CÓDIGO DE VERIFICACIÓN: ');
     const checkRes = await fetch(`${apiUrl}/verify/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -191,16 +191,16 @@ async function verificationWorkflow(purpose, prefilledEmail = null) {
 
     if (purpose === 'change-password') {
       endpoint = '/action/change-password';
-      const newPassword = await prompt('ENTER NEW PASSWORD: ');
-      const confirm = await prompt('CONFIRM NEW PASSWORD: ');
+      const newPassword = await prompt('INGRESA LA NUEVA CONTRASEÑA: ');
+      const confirm = await prompt('CONFIRMA LA NUEVA CONTRASEÑA: ');
       if (newPassword !== confirm) {
-        console.log('\nERROR: PASSWORDS DO NOT MATCH.');
+        console.log('\nERROR: LAS CONTRASEÑAS NO COINCIDEN.');
         return;
       }
       body.append('newPassword', newPassword);
     } else if (purpose === 'update-email') {
       endpoint = '/action/change-email';
-      const newEmail = await prompt('ENTER NEW EMAIL: ');
+      const newEmail = await prompt('INGRESA EL NUEVO CORREO ELECTRÓNICO: ');
       body.append('newEmail', newEmail);
     } else if (purpose === 'unlock-account') {
       endpoint = '/action/unlock-account';
@@ -217,7 +217,7 @@ async function verificationWorkflow(purpose, prefilledEmail = null) {
       body
     });
     if (res.status === 401) {
-      console.log('\nSESSION EXPIRED OR REVOKED. PLEASE LOGIN AGAIN.');
+      console.log('\nSESIÓN EXPIRADA O REVOCADA. POR FAVOR INICIA SESIÓN DE NUEVO.');
       currentToken = null;
       await mainMenu();
       return;
